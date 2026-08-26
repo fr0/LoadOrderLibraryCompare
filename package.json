@@ -1,0 +1,13 @@
+{
+  "name": "loadorder-compare",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Compare mod lists from loadorderlibrary.com (set diff of plugins/mods)",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Load Order Compare</title>
+    <script>
+      // Set the theme before first paint to avoid a flash of the wrong colors
+      (function () {
+        try {
+          var t = localStorage.getItem("locompare-theme");
+          if (t !== "light" && t !== "dark")
+            t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          document.documentElement.dataset.theme = t;
+          document.documentElement.dataset.mono =
+            localStorage.getItem("locompare-mono") === "false" ? "false" : "true";
+        } catch (e) {
+          document.documentElement.dataset.theme = "light";
+          document.documentElement.dataset.mono = "true";
+        }
+      })();
+    </script>
+    <link rel="stylesheet" href="/styles.css" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>%F0%9F%93%9A</text></svg>"
+    />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>Load Order Compare</h1>
+        <p class="subtitle">
+          Set-diff two mod lists from
+          <a href="https://loadorderlibrary.com" target="_blank" rel="noopener">loadorderlibrary.com</a>
+        </p>
+      </div>
+      <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle light/dark mode" title="Toggle light/dark mode">🌙</button>
+    </header>
+
+    <main>
+      <form id="compare-form" class="inputs">
+        <div class="input-col">
+          <label for="input-a">List A</label>
+          <input id="input-a" name="a" placeholder="slug or URL, e.g. nerevar-moon-and-star" autocomplete="off" />
+        </div>
+        <div class="input-col">
+          <label for="input-b">List B</label>
+          <input id="input-b" name="b" placeholder="slug or URL, e.g. path-of-the-incarnate" autocomplete="off" />
+        </div>
+        <button type="submit" id="compare-btn">Compare</button>
+      </form>
+
+      <p id="status" class="status" hidden></p>
+
+      <section id="meta" class="meta" hidden>
+        <div class="meta-card" data-side="a"></div>
+        <div class="meta-card" data-side="b"></div>
+      </section>
+
+      <section id="controls" class="controls" hidden>
+        <input id="filter" type="search" placeholder="Filter results…" autocomplete="off" />
+        <label class="opt"><input type="checkbox" id="opt-hide-disabled" /> Ignore disabled entries</label>
+        <label class="opt" id="opt-group-label" title="Group results under the modlist.txt category separators (unavailable for flat files like loadorder.txt)."><input type="checkbox" id="opt-group" /> Group by category</label>
+        <label class="opt" title="Show mod/plugin names in a monospace font."><input type="checkbox" id="opt-mono" /> Monospace</label>
+      </section>
+
+      <section id="results" class="results" hidden>
+        <div class="col" data-kind="a-only">
+          <div class="col-head">
+            <h2><span class="dot a"></span><span class="label" data-label>Only in A</span> <span class="count" data-count></span></h2>
+            <button class="copy" data-copy>Copy</button>
+          </div>
+          <ul></ul>
+        </div>
+        <div class="col" data-kind="shared">
+          <div class="col-head">
+            <h2><span class="dot shared"></span><span class="label" data-label>Shared</span> <span class="count" data-count></span></h2>
+            <button class="copy" data-copy>Copy</button>
+          </div>
+          <ul></ul>
+        </div>
+        <div class="col" data-kind="b-only">
+          <div class="col-head">
+            <h2><span class="dot b"></span><span class="label" data-label>Only in B</span> <span class="count" data-count></span></h2>
+            <button class="copy" data-copy>Copy</button>
+          </div>
+          <ul></ul>
+        </div>
+      </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
