@@ -1,5 +1,7 @@
 # Load Order Compare
 
+<img src="doc/screenshot.png" alt="Screenshot" />
+
 A small web app that does a set diff of two mod lists from [loadorderlibrary.com](https://loadorderlibrary.com).
 Given two lists, it shows which plugins/mods are only in one of the two lists or shared by both.
 
