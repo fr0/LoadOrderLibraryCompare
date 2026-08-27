@@ -320,6 +320,9 @@ els.form.addEventListener("submit", async (e) => {
     renderDiff();
     els.inputA.value = listA.slug;
     els.inputB.value = listB.slug;
+    // Reflect the comparison in the address bar so it's shareable/bookmarkable.
+    const params = new URLSearchParams({ a: listA.slug, b: listB.slug });
+    history.replaceState(null, "", `?${params}`);
   } catch (err) {
     setStatus(err.message, true);
   } finally {

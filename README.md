@@ -9,10 +9,12 @@ Built for Bethesda-style load orders (Morrowind/Skyrim/Fallout, OpenMW, etc.), b
 
 ## Why a proxy?
 
-The Load Order Library API only allows browser (CORS) requests from `loadorderlibrary.com` itself, so the page can't call it directly. A tiny server-side proxy (`/api/list/<slug-or-url>`) fetches the data instead. The same frontend runs against either backend:
+The Load Order Library API only allows browser (CORS) requests from `loadorderlibrary.com` itself, so the page can't call it directly. A tiny server-side proxy (`/api/list/<slug-or-url>`) fetches the data instead.
 
-- `server.js`: a zero-dependency Node server for local use.
-- `worker.js`: a Cloudflare Worker (Workers + Static Assets) for deployment.
+There are two entry points:
+
+*`server.js`: a zero-dependency Node server for local use
+*`worker.js`: a Cloudflare Worker (Workers + Static Assets) for deployment
 
 No API token is needed for public lists.
 
