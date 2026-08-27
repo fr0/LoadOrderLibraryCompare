@@ -72,6 +72,22 @@ function sideHasCategories(side) {
   return (file?.content || []).some((l) => /_separator\s*$/i.test(String(l)));
 }
 
+const KNOWN_FILES = new Set(["loadorder.txt", "modlist.txt", "plugins.txt"]);
+function syncOtherSide(fromSide) {
+  const other = fromSide === "a" ? "b" : "a";
+  const fromFile = (state[fromSide].list?.files || [])[state[fromSide].fileIndex];
+  const name = (fromFile?.clean_name || "").toLowerCase();
+  if (!KNOWN_FILES.has(name)) return;
+
+  const files = state[other].list?.files || [];
+  const idx = files.findIndex((f) => (f.clean_name || "").toLowerCase() === name);
+  if (idx < 0 || idx === state[other].fileIndex) return;
+
+  state[other].fileIndex = idx;
+  const sel = document.querySelector(`[data-file-select="${other}"]`);
+  if (sel) sel.value = String(idx);
+}
+
 // Not really thrilled that we need this, but I don't see a more generic way to do it.
 // (If you're reading this and you know of a better way, please submit a PR.)
 // Things not listed here just fallback to the name.
@@ -162,6 +178,7 @@ function renderMeta(side) {
 
   card.querySelector(`[data-file-select="${side}"]`).addEventListener("change", (e) => {
     state[side].fileIndex = Number(e.target.value);
+    syncOtherSide(side);
     updateGroupAvailability();
     renderDiff();
   });
