@@ -7,25 +7,45 @@ Given two lists, it shows which plugins/mods are only in one of the two lists or
 
 Built for Bethesda-style load orders (Morrowind/Skyrim/Fallout, OpenMW, etc.), but should work with any list on the site (probably, not very well tested yet).
 
-## Why a local server?
+## Why a proxy?
 
-The Load Order Library API only allows browser (CORS) requests from `loadorderlibrary.com` itself. A tiny Node server serves the UI as static assets and proxies the API server-side. No API token is needed for public lists.
+The Load Order Library API only allows browser (CORS) requests from `loadorderlibrary.com` itself, so the page can't call it directly. A tiny server-side proxy (`/api/list/<slug-or-url>`) fetches the data instead. The same frontend runs against either backend:
 
-## Requirements
+- **`server.js`** — a zero-dependency Node server for local use.
+- **`functions/api/list/[[path]].js`** — a Cloudflare Pages Function for deployment.
 
-- Node.js 18+ (uses the built-in `fetch`; no npm dependencies)
+No API token is needed for public lists.
 
-## Run
+## Run locally
+
+Zero-dependency Node server (no install needed):
 
 ```bash
 node server.js
 ```
 
-Then open http://localhost:5178. To use a different port:
+Then open http://localhost:5178 (set `PORT` to change it: `PORT=8080 node server.js`).
+
+Or run it exactly as it behaves on Cloudflare, using Wrangler:
 
 ```bash
-PORT=8080 node server.js
+npm install
+npm run dev
 ```
+
+## Deploy to Cloudflare Pages
+
+Pages serves `public/` as static assets; the Function in `functions/` handles the `/api/list/*` proxy (Functions run on Workers). No environment variables or secrets are required.
+
+One-off deploy from your machine:
+
+```bash
+npm install
+npm run deploy   # wrangler pages deploy
+```
+
+Or connect the repo in the Cloudflare dashboard (Pages > Create > Connect to Git) with the "build command" empty and the "build output directory" set to `public`.
+Every push then deploys automatically. The proxy responses contain a 5-minute `cache-control` setting, so the Cloudflare edge absorbs repeated lookups of the same list.
 
 ## Usage
 
@@ -49,5 +69,7 @@ Lines starting with `#` (generator banners/comments) and blank lines are ignored
 
 ## Files
 
-- `server.js` - static file server + `/api/list/<slug-or-url>` proxy.
 - `public/index.html`, `public/styles.css`, `public/app.js` - the UI and diff logic. Vanilla JS.
+- `functions/api/list/[[path]].js` - Cloudflare Pages Function: the `/api/list/<slug-or-url>` proxy.
+- `server.js` - equivalent zero-dependency Node server (static files + the same proxy) for local use.
+- `wrangler.toml` - Cloudflare Pages config (`pages_build_output_dir = "public"`).

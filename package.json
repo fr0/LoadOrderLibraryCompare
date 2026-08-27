@@ -5,9 +5,14 @@
   "description": "Compare mod lists from loadorderlibrary.com (set diff of plugins/mods)",
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "wrangler pages dev",
+    "deploy": "wrangler pages deploy"
   },
   "engines": {
     "node": ">=18"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
   }
 }
