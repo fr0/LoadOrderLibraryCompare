@@ -52,6 +52,15 @@ a { color: var(--accent); }
   gap: 16px;
 }
 .topbar h1 { margin: 0; font-size: 22px; letter-spacing: 0.2px; }
+.topbar-actions { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.gh-link {
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
+  padding: 6px;
+  border-radius: 8px;
+}
+.gh-link:hover { color: var(--text); background: var(--panel); }
 .theme-toggle {
   flex: 0 0 auto;
   background: transparent;
