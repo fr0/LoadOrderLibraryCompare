@@ -362,6 +362,179 @@ if (monoBox) {
   });
 }
 
+// Modal dialog for browsing lists
+const browse = {
+  el: document.getElementById("browse"),
+  target: document.getElementById("browse-target"),
+  search: document.getElementById("browse-search"),
+  game: document.getElementById("browse-game"),
+  results: document.getElementById("browse-results"),
+  prev: document.getElementById("browse-prev"),
+  next: document.getElementById("browse-next"),
+  pageinfo: document.getElementById("browse-pageinfo"),
+  closeBtn: document.getElementById("browse-close"),
+};
+const browseState = { side: "a", page: 1, lastPage: 1, gamesLoaded: false, reqId: 0 };
+// Remembers the game of the list picked/loaded per side, to default the filter.
+const browseGameHint = { a: null, b: null };
+const sideGame = (s) => browseGameHint[s] || state[s].list?.game?.slug || null;
+
+async function openBrowse(side) {
+  browseState.side = side;
+  browse.target.textContent = `List ${side.toUpperCase()}`;
+  browse.el.hidden = false;
+  browse.search.value = "";
+  await loadGames();
+  // Default the game filter to a known game: prefer the other side's loaded
+  // list, else this side's. (Either is set once a comparison has run.)
+  const other = side === "a" ? "b" : "a";
+  const knownGame = sideGame(other) || sideGame(side);
+  browse.game.value = knownGame && [...browse.game.options].some((o) => o.value === knownGame) ? knownGame : "";
+  browseState.page = 1;
+  runBrowse();
+  browse.search.focus();
+}
+function closeBrowse() { browse.el.hidden = true; }
+
+// Populate the game filter once, from /api/games
+async function loadGames() {
+  if (browseState.gamesLoaded) return;
+  try {
+    const res = await fetch("/api/games");
+    const body = await res.json();
+    const games = (body.data || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+    for (const g of games) {
+      const opt = document.createElement("option");
+      opt.value = g.slug;
+      opt.textContent = g.lists_count != null ? `${g.name} (${g.lists_count})` : g.name;
+      browse.game.appendChild(opt);
+    }
+    browseState.gamesLoaded = true;
+  } catch { /* leave just "All games" */ }
+}
+
+async function runBrowse() {
+  const reqId = ++browseState.reqId; // ignore responses to superseded requests
+  browse.results.innerHTML = `<p class="browse-msg">Loading…</p>`;
+  const qs = new URLSearchParams();
+  if (browse.search.value.trim()) qs.set("query", browse.search.value.trim());
+  if (browse.game.value) qs.set("game", browse.game.value);
+  qs.set("page", String(browseState.page));
+  try {
+    const res = await fetch(`/api/lists?${qs}`);
+    const body = await res.json();
+    if (reqId !== browseState.reqId) return;
+    if (!res.ok) throw new Error(body.error || `Request failed (${res.status}).`);
+    renderBrowse(body);
+  } catch (err) {
+    if (reqId !== browseState.reqId) return;
+    browse.results.innerHTML = `<p class="browse-msg error">${escapeHtml(err.message)}</p>`;
+  }
+}
+
+// A single selectable list row
+function browseRowHtml(it) {
+  const sub = [it.game?.name, it.version ? `v${it.version}` : null, it.author?.name ? `by ${it.author.name}` : null, fmtDate(it.updated)]
+    .filter(Boolean).map(escapeHtml).join(" · ");
+  return `<button class="browse-row" type="button" data-slug="${escapeHtml(it.slug)}" data-game="${escapeHtml(it.game?.slug || "")}">` +
+    `<span class="browse-name">${escapeHtml(it.name)}</span>` +
+    `<span class="browse-meta">${sub}</span></button>`;
+}
+
+// One version inside an expanded group (name/author are shown on the head)
+function versionRowHtml(it) {
+  const when = [fmtDate(it.updated), it.version ? `v${it.version}` : null].filter(Boolean).map(escapeHtml).join(" · ");
+  return `<button class="browse-row version-row" type="button" data-slug="${escapeHtml(it.slug)}" data-game="${escapeHtml(it.game?.slug || "")}">` +
+    `<span class="v-when">${when}</span><span class="v-slug">${escapeHtml(it.slug)}</span></button>`;
+}
+
+// Collapsed head for a group of same-name + same-author versions.
+function groupHeadHtml(items) {
+  const newest = items[0];
+  const sub = [newest.game?.name, newest.author?.name ? `by ${newest.author.name}` : null, `latest ${fmtDate(newest.updated)}`]
+    .filter(Boolean).map(escapeHtml).join(" · ");
+  return `<button class="browse-row browse-group-head" type="button" aria-expanded="false">` +
+    `<span class="browse-name">${escapeHtml(newest.name)} <span class="ver-badge">${items.length} versions</span></span>` +
+    `<span class="browse-meta">${sub}</span></button>`;
+}
+
+function groupVersions(items) {
+  const groups = [];
+  const index = new Map();
+  for (const it of items) {
+    const author = it.author?.name || "";
+    // Anonymous lists aren't grouped — same name by different people isn't a version.
+    const key = author ? `${it.name.trim().toLowerCase()}|${author.toLowerCase()}` : null;
+    if (key && index.has(key)) {
+      groups[index.get(key)].push(it);
+    } else {
+      if (key) index.set(key, groups.length);
+      groups.push([it]);
+    }
+  }
+  return groups;
+}
+
+function renderBrowse(body) {
+  const items = body.data || [];
+  const meta = body.meta || {};
+  browseState.page = meta.current_page || 1;
+  browseState.lastPage = meta.last_page || 1;
+  if (!items.length) {
+    browse.results.innerHTML = `<p class="browse-msg">No lists found.</p>`;
+  } else {
+    browse.results.innerHTML = groupVersions(items).map((group) => {
+      if (group.length === 1) return browseRowHtml(group[0]);
+      group.sort((a, b) => String(b.updated || "").localeCompare(String(a.updated || "")));
+      return `<div class="browse-group">${groupHeadHtml(group)}` +
+        `<div class="browse-versions" hidden>${group.map(versionRowHtml).join("")}</div></div>`;
+    }).join("");
+  }
+  const total = meta.total != null ? ` · ${meta.total} lists` : "";
+  browse.pageinfo.textContent = `Page ${browseState.page} of ${browseState.lastPage}${total}`;
+  browse.prev.disabled = browseState.page <= 1;
+  browse.next.disabled = browseState.page >= browseState.lastPage;
+  browse.results.scrollTop = 0;
+}
+
+function pickBrowse(slug) {
+  (browseState.side === "a" ? els.inputA : els.inputB).value = slug;
+  closeBrowse();
+  // If both sides are now filled, jump straight to the comparison
+  if (els.inputA.value.trim() && els.inputB.value.trim()) els.form.requestSubmit();
+  else (browseState.side === "a" ? els.inputB : els.inputA).focus();
+}
+
+for (const btn of document.querySelectorAll("[data-browse]")) {
+  btn.addEventListener("click", () => openBrowse(btn.dataset.browse));
+}
+browse.closeBtn.addEventListener("click", closeBrowse);
+browse.el.addEventListener("click", (e) => { if (e.target === browse.el) closeBrowse(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !browse.el.hidden) closeBrowse(); });
+browse.results.addEventListener("click", (e) => {
+  const head = e.target.closest(".browse-group-head");
+  if (head) {
+    const versions = head.nextElementSibling; // .browse-versions
+    const opening = versions.hidden;
+    versions.hidden = !opening;
+    head.setAttribute("aria-expanded", String(opening));
+    return;
+  }
+  const row = e.target.closest("[data-slug]");
+  if (row) {
+    if (row.dataset.game) browseGameHint[browseState.side] = row.dataset.game;
+    pickBrowse(row.dataset.slug);
+  }
+});
+let browseDebounce;
+browse.search.addEventListener("input", () => {
+  clearTimeout(browseDebounce);
+  browseDebounce = setTimeout(() => { browseState.page = 1; runBrowse(); }, 300);
+});
+browse.game.addEventListener("change", () => { browseState.page = 1; runBrowse(); });
+browse.prev.addEventListener("click", () => { if (browseState.page > 1) { browseState.page--; runBrowse(); } });
+browse.next.addEventListener("click", () => { if (browseState.page < browseState.lastPage) { browseState.page++; runBrowse(); } });
+
 // Prefill from ?a=&b= so comparisons are shareable/bookmarkable.
 const params = new URLSearchParams(location.search);
 if (params.get("a")) els.inputA.value = params.get("a");

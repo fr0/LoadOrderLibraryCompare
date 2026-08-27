@@ -63,6 +63,29 @@ async function proxyList(res, slug) {
   }
 }
 
+// Proxy the browse/index endpoints (/lists, /games). For /lists whitelist a few params and map them to the upstream's names (query, filter[game], page).
+async function proxyBrowse(res, pathname, searchParams) {
+  const upstream = new URL(`${API_BASE}${pathname}`);
+  if (pathname === "/lists") {
+    const page = searchParams.get("page");
+    const query = searchParams.get("query");
+    const game = searchParams.get("game");
+    if (page) upstream.searchParams.set("page", page);
+    if (query) upstream.searchParams.set("query", query);
+    if (game) upstream.searchParams.set("filter[game]", game);
+  }
+  try {
+    const r = await fetch(upstream, {
+      headers: { "user-agent": "loadorder-compare/1.0 (local tool)", accept: "application/json" },
+    });
+    const text = await r.text();
+    res.writeHead(r.status, { "content-type": "application/json; charset=utf-8" });
+    res.end(text);
+  } catch (err) {
+    sendJson(res, 502, { error: `Could not reach the Load Order Library API: ${err.message}` });
+  }
+}
+
 async function serveStatic(res, urlPath) {
   const rel = urlPath === "/" ? "/index.html" : urlPath;
   // Prevent path traversal outside PUBLIC_DIR.
@@ -83,6 +106,10 @@ async function serveStatic(res, urlPath) {
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
+
+  // Browse proxies: /api/lists (searchable index) and /api/games (filter options)
+  if (url.pathname === "/api/lists") return proxyBrowse(res, "/lists", url.searchParams);
+  if (url.pathname === "/api/games") return proxyBrowse(res, "/games", url.searchParams);
 
   // API proxy: /api/list/<slug-or-url>
   if (url.pathname.startsWith("/api/list/")) {

@@ -37,7 +37,8 @@ npm run dev   # wrangler dev
 
 ## Usage
 
-1. Enter a "slug" (`nerevar-moon-and-star`) or a full URL (`https://loadorderlibrary.com/lists/nerevar-moon-and-star`) for each list.
+1. Enter a "slug" (`nerevar-moon-and-star`) or a full URL (`https://loadorderlibrary.com/lists/nerevar-moon-and-star`) for each list,
+   or click "Browse" to search the site's lists by name and filter by game, then pick one. (Picking both sides runs the comparison automatically.)
 2. Click "Compare".
 3. If a list has multiple files (e.g. `plugins.txt`, `modlist.txt`, `loadorder.txt`), pick which file to compare per side. When a list includes a `modlist.txt`, it is selected by default and grouping is turned on automatically, since that file has the category data.
 

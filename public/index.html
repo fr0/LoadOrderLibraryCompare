@@ -41,11 +41,17 @@
     <main>
       <form id="compare-form" class="inputs">
         <div class="input-col">
-          <label for="input-a">List A</label>
+          <div class="input-label-row">
+            <label for="input-a">List A</label>
+            <button type="button" class="browse-btn" data-browse="a">Browse…</button>
+          </div>
           <input id="input-a" name="a" placeholder="slug or URL, e.g. nerevar-moon-and-star" autocomplete="off" />
         </div>
         <div class="input-col">
-          <label for="input-b">List B</label>
+          <div class="input-label-row">
+            <label for="input-b">List B</label>
+            <button type="button" class="browse-btn" data-browse="b">Browse…</button>
+          </div>
           <input id="input-b" name="b" placeholder="slug or URL, e.g. path-of-the-incarnate" autocomplete="off" />
         </div>
         <button type="submit" id="compare-btn">Compare</button>
@@ -89,6 +95,25 @@
         </div>
       </section>
     </main>
+
+    <div id="browse" class="modal" hidden>
+      <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="browse-title">
+        <div class="modal-head">
+          <h2 id="browse-title">Browse lists <span id="browse-target" class="target-badge"></span></h2>
+          <button id="browse-close" class="icon-btn" type="button" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-filters">
+          <input id="browse-search" type="search" placeholder="Search by name…" autocomplete="off" />
+          <select id="browse-game" aria-label="Filter by game"><option value="">All games</option></select>
+        </div>
+        <div id="browse-results" class="browse-results" tabindex="-1"></div>
+        <div class="modal-foot">
+          <button id="browse-prev" class="pager" type="button">< Prev</button>
+          <span id="browse-pageinfo" class="pageinfo"></span>
+          <button id="browse-next" class="pager" type="button">Next ></button>
+        </div>
+      </div>
+    </div>
 
     <script src="/app.js" type="module"></script>
   </body>

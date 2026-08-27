@@ -44,7 +44,34 @@ async function proxyList(pathname) {
         "content-type": "application/json; charset=utf-8",
         // Let the Cloudflare edge cache repeat lookups, reducing load on the upstream API
         "cache-control": "public, max-age=300"
-      },
+      }
+    });
+  } catch (err) {
+    return json({ error: `Could not reach the Load Order Library API: ${err.message}` }, 502);
+  }
+}
+
+async function proxyBrowse(pathname, searchParams) {
+  const upstream = new URL(`${API_BASE}${pathname}`);
+  if (pathname === "/lists") {
+    const page = searchParams.get("page");
+    const query = searchParams.get("query");
+    const game = searchParams.get("game");
+    if (page) upstream.searchParams.set("page", page);
+    if (query) upstream.searchParams.set("query", query);
+    if (game) upstream.searchParams.set("filter[game]", game);
+  }
+  try {
+    const r = await fetch(upstream, {
+      headers: { "user-agent": "loadorder-compare/1.0", accept: "application/json" },
+    });
+    const text = await r.text();
+    return new Response(text, {
+      status: r.status,
+      headers: {
+        "content-type": "application/json; charset=utf-8",
+        "cache-control": "public, max-age=120"
+      }
     });
   } catch (err) {
     return json({ error: `Could not reach the Load Order Library API: ${err.message}` }, 502);
@@ -58,6 +85,8 @@ export default {
       if (request.method !== "GET") return json({ error: "Method not allowed." }, 405);
       return proxyList(url.pathname);
     }
+    if (url.pathname === "/api/lists") return proxyBrowse("/lists", url.searchParams);
+    if (url.pathname === "/api/games") return proxyBrowse("/games", url.searchParams);
     // Everything else is a static asset (index.html, app.js, styles.css, etc.)
     return env.ASSETS.fetch(request);
   },
