@@ -24,6 +24,11 @@ const state = {
   b: { list: null, fileIndex: 0 },
 };
 
+// case-insensitive, and treats spaces and underscores as equivalent
+function matchKey(name) {
+  return String(name).toLowerCase().replace(/[_\s]+/g, " ").trim();
+}
+
 // Turn a file's raw content lines into structured entries
 // Handles the common load-order formats:
 //   loadorder.txt  -> plain plugin names
@@ -50,11 +55,11 @@ function parseContent(lines) {
 
     if (/_separator$/i.test(name)) {
       category = name.replace(/_separator$/i, "").trim() || "Untitled section";
-      entries.push({ name, enabled, isSeparator: true, category, key: name.toLowerCase() });
+      entries.push({ name, enabled, isSeparator: true, category, key: matchKey(name) });
       continue;
     }
 
-    entries.push({ name, enabled, isSeparator: false, category, key: name.toLowerCase() });
+    entries.push({ name, enabled, isSeparator: false, category, key: matchKey(name) });
   }
   return entries;
 }
@@ -219,7 +224,7 @@ function renderDiff() {
   // "Shared" is based on A's entries so ordering/casing is stable.
   const shared = entriesA.filter((e) => mapB.has(e.key));
 
-  const filter = els.filter.value.trim().toLowerCase();
+  const filter = matchKey(els.filter.value);
   const match = (e) => !filter || e.key.includes(filter);
 
   const gameA = state.a.list?.game || {};
