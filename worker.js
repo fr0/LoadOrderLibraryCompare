@@ -1,10 +1,8 @@
-// Cloudflare Pages Function. Proxies the Load Order Library API.
-// Mirrors the /api/list/<slug-or-url> route from server.js so the same frontend
-// works unchanged on Cloudflare Pages.
+// Cloudflare Worker entry point (Workers + Static Assets)
 
 const API_BASE = "https://api.loadorderlibrary.com/v1";
 
-// Accept a bare slug or a full loadorderlibrary.com URL; reduce it to the slug
+// Accept a bare slug or a full loadorderlibrary.com URL; reduce it to the slug.
 function extractSlug(raw) {
   const s = String(raw || "").trim();
   const m = s.match(/lists\/([^/?#]+)/i);
@@ -18,8 +16,7 @@ const json = (obj, status = 200) =>
     headers: { "content-type": "application/json; charset=utf-8" }
   });
 
-export async function onRequestGet({ request }) {
-  const { pathname } = new URL(request.url);
+async function proxyList(pathname) {
   const encoded = pathname.slice("/api/list/".length);
   let raw = encoded;
   try { raw = decodeURIComponent(encoded); } catch { /* fall back to raw */ }
@@ -30,9 +27,9 @@ export async function onRequestGet({ request }) {
   try {
     const upstream = await fetch(`${API_BASE}/lists/${encodeURIComponent(slug)}`, {
       headers: {
-        "user-agent": "loadorder-compare/1.0", // A real UA avoids Cloudflare blocking the default worker fetch agent
-        accept: "application/json",
-      }
+        "user-agent": "loadorder-compare/1.0", // A real UA avoids Cloudflare blocking the default worker fetch agent.
+        accept: "application/json"
+      },
     });
     const text = await upstream.text();
     if (!upstream.ok) {
@@ -45,11 +42,23 @@ export async function onRequestGet({ request }) {
     return new Response(text, {
       headers: {
         "content-type": "application/json; charset=utf-8",
-        // Let the Cloudflare edge cache repeat lookups, reducing load on loadorderlibrary.com
-        "cache-control": "public, max-age=300",
-      }
+        // Let the Cloudflare edge cache repeat lookups, reducing load on the upstream API
+        "cache-control": "public, max-age=300"
+      },
     });
   } catch (err) {
     return json({ error: `Could not reach the Load Order Library API: ${err.message}` }, 502);
   }
 }
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    if (url.pathname.startsWith("/api/list/")) {
+      if (request.method !== "GET") return json({ error: "Method not allowed." }, 405);
+      return proxyList(url.pathname);
+    }
+    // Everything else is a static asset (index.html, app.js, styles.css, etc.)
+    return env.ASSETS.fetch(request);
+  },
+};

@@ -1,3 +1,10 @@
-name = "loadorder-compare"
-pages_build_output_dir = "public"
+# IMPORTANT: `name` must match the Worker connected  in the Cloudflare dashboard
+name = "loadorderlibrarycompare"
+main = "worker.js"
 compatibility_date = "2024-11-06"
+
+# Serve the static UI (index.html, app.js, styles.css) straight from ./public.
+# Requests that don't match a static file fall through to worker.js.
+[assets]
+directory = "./public"
+binding = "ASSETS"
