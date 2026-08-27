@@ -74,7 +74,13 @@
         <label class="opt"><input type="checkbox" id="opt-hide-disabled" /> Ignore disabled entries</label>
         <label class="opt" id="opt-group-label" title="Group results under the modlist.txt category separators (unavailable for flat files like loadorder.txt)."><input type="checkbox" id="opt-group" /> Group by category</label>
         <label class="opt" title="Show mod/plugin names in a monospace font."><input type="checkbox" id="opt-mono" /> Monospace</label>
+        <label class="opt" title="Count 'possible matches' (same mod, named differently) as Shared."><input type="checkbox" id="opt-merge" /> Count possible matches as shared</label>
       </section>
+
+      <details id="possible" class="possible" hidden>
+        <summary>Possible matches <span class="pm-badge" id="possible-count">0</span> <span class="pm-hint">likely the same mod, named differently (not merged)</span></summary>
+        <div class="pm-list" id="possible-list"></div>
+      </details>
 
       <section id="results" class="results" hidden>
         <div class="col" data-kind="a-only">

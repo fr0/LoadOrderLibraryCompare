@@ -16,6 +16,7 @@ const els = {
   hideDisabled: $("#opt-hide-disabled"),
   group: $("#opt-group"),
   groupLabel: $("#opt-group-label"),
+  merge: $("#opt-merge"),
 };
 
 // Holds the two loaded lists and which file index is selected for each side
@@ -212,6 +213,61 @@ function updateGroupAvailability() {
   if (!available) els.group.checked = false;
 }
 
+// Possible matches
+const tokensOf = (name) => matchKey(name).split(" ").filter(Boolean);
+
+// Flag likely same-mod pairs across the two "only" sets: word-token sets where one is a subset of the other (an added qualifier like "for OpenMW") or that overlap heavily.
+function findPossibleMatches(aOnly, bOnly) {
+  const aTok = aOnly.map((e) => new Set(tokensOf(e.name)));
+  const bTok = bOnly.map((e) => new Set(tokensOf(e.name)));
+  // Inverted index so we only compare entries that share at least one token.
+  const byToken = new Map();
+  bTok.forEach((set, j) => { for (const t of set) (byToken.get(t) || byToken.set(t, []).get(t)).push(j); });
+
+  const pairs = [];
+  aTok.forEach((sa, i) => {
+    if (sa.size < 2) return; // single-word names are too ambiguous to guess
+    const seen = new Set();
+    for (const t of sa) {
+      for (const j of byToken.get(t) || []) {
+        if (seen.has(j)) continue;
+        seen.add(j);
+        const sb = bTok[j];
+        if (sb.size < 2) continue;
+        let inter = 0;
+        for (const x of sa) if (sb.has(x)) inter++;
+        if (inter < 2) continue;
+        const subset = inter === Math.min(sa.size, sb.size);
+        const sim = inter / (sa.size + sb.size - inter);
+        if (subset || sim >= 0.6) pairs.push({ a: aOnly[i], b: bOnly[j], score: (subset ? 1 : 0) + sim });
+      }
+    }
+  });
+  return pairs.sort((p, q) => q.score - p.score).slice(0, 200);
+}
+
+// Recompute only when the underlying sets change (not on filter/display toggles)
+let possibleMemo = { sig: null, pairs: [] };
+function possibleMatchesFor(aOnly, bOnly) {
+  const sig = `${state.a.list?.slug}|${state.a.fileIndex}|${state.b.list?.slug}|${state.b.fileIndex}|${els.hideDisabled.checked}`;
+  if (sig !== possibleMemo.sig) possibleMemo = { sig, pairs: findPossibleMatches(aOnly, bOnly) };
+  return possibleMemo.pairs;
+}
+
+function renderPossible(pairs, merged) {
+  const box = document.getElementById("possible");
+  if (!pairs.length) { box.hidden = true; return; }
+  box.hidden = false;
+  document.getElementById("possible-count").textContent = pairs.length;
+  const hint = box.querySelector(".pm-hint");
+  if (hint) hint.textContent = merged ? "counted as Shared" : "likely the same mod, named differently (not merged)";
+  const side = (e, cls) => `<span class="pm-${cls}"><span class="dot ${cls}"></span>` +
+    `<span class="pm-name">${escapeHtml(e.name)}</span>` +
+    (e.category ? ` <span class="pm-cat">${escapeHtml(e.category)}</span>` : "") + `</span>`;
+  document.getElementById("possible-list").innerHTML = pairs.map((p) =>
+    `<div class="pm-row">${side(p.a, "a")}<span class="pm-arrow">-</span>${side(p.b, "b")}</div>`).join("");
+}
+
 function renderDiff() {
   const entriesA = currentEntries("a");
   const entriesB = currentEntries("b");
@@ -219,10 +275,24 @@ function renderDiff() {
   const mapA = new Map(entriesA.map((e) => [e.key, e]));
   const mapB = new Map(entriesB.map((e) => [e.key, e]));
 
-  const aOnly = entriesA.filter((e) => !mapB.has(e.key));
-  const bOnly = entriesB.filter((e) => !mapA.has(e.key));
+  let aOnly = entriesA.filter((e) => !mapB.has(e.key));
+  let bOnly = entriesB.filter((e) => !mapA.has(e.key));
   // "Shared" is based on A's entries so ordering/casing is stable.
-  const shared = entriesA.filter((e) => mapB.has(e.key));
+  let shared = entriesA.filter((e) => mapB.has(e.key));
+
+  // Fuzzy "possible matches" come from the exact-only sets; optionally promote
+  // them into Shared. Computed before the display filter, so the merge is total.
+  const pairs = possibleMatchesFor(aOnly, bOnly);
+  const merged = els.merge.checked && pairs.length > 0;
+  if (merged) {
+    // Match by key (stable string) — pairs may reference entry objects from a
+    // memoized earlier render, so object identity won't line up.
+    const matchedA = new Set(pairs.map((p) => p.a.key));
+    const matchedB = new Set(pairs.map((p) => p.b.key));
+    shared = shared.concat(aOnly.filter((e) => matchedA.has(e.key)));
+    aOnly = aOnly.filter((e) => !matchedA.has(e.key));
+    bOnly = bOnly.filter((e) => !matchedB.has(e.key));
+  }
 
   const filter = matchKey(els.filter.value);
   const match = (e) => !filter || e.key.includes(filter);
@@ -241,6 +311,10 @@ function renderDiff() {
   $(`.col[data-kind="a-only"] [data-count]`).textContent = aOnly.length;
   $(`.col[data-kind="shared"] [data-count]`).textContent = shared.length;
   $(`.col[data-kind="b-only"] [data-count]`).textContent = bOnly.length;
+
+  // The results filter also narrows the possible-matches panel (either side)
+  const shownPairs = filter ? pairs.filter((p) => p.a.key.includes(filter) || p.b.key.includes(filter)) : pairs;
+  renderPossible(shownPairs, merged);
 
   els.controls.hidden = false;
   els.results.hidden = false;
@@ -338,6 +412,7 @@ els.form.addEventListener("submit", async (e) => {
 els.filter.addEventListener("input", () => { if (state.a.list) renderDiff(); });
 els.hideDisabled.addEventListener("change", () => { if (state.a.list) renderDiff(); });
 els.group.addEventListener("change", () => { if (state.a.list) renderDiff(); });
+els.merge.addEventListener("change", () => { if (state.a.list) renderDiff(); });
 
 wireCopyButtons();
 

@@ -158,6 +158,39 @@ button:disabled { opacity: 0.5; cursor: default; }
 .controls #filter { flex: 1; min-width: 200px; }
 .opt { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
 
+/* Possible matches (same mod, named differently) */
+.possible {
+  margin-top: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0 14px;
+}
+.possible[hidden] { display: none; }
+.possible summary {
+  cursor: pointer;
+  padding: 10px 2px;
+  font-size: 13px;
+  font-weight: 600;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.possible summary::-webkit-details-marker { display: none; }
+.possible summary::before { content: "▸"; color: var(--muted); font-weight: 400; }
+.possible[open] summary::before { content: "▾"; }
+.pm-badge { background: var(--accent); color: var(--on-accent); border-radius: 10px; padding: 1px 8px; font-size: 12px; }
+.pm-hint { color: var(--muted); font-weight: 400; }
+.pm-list { padding: 2px 2px 12px; display: flex; flex-direction: column; gap: 6px; }
+.pm-row { display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline; gap: 12px; font-size: 13px; }
+.pm-a, .pm-b { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.pm-a { justify-content: flex-end; text-align: right; }
+.pm-name { font-family: var(--mod-font); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pm-cat { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; flex: 0 0 auto; }
+.pm-arrow { color: var(--muted); flex: 0 0 auto; }
+.pm-row .dot { flex: 0 0 auto; align-self: center; }
+
 .results {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -401,4 +434,7 @@ button:disabled { opacity: 0.5; cursor: default; }
 @media (max-width: 820px) {
   .inputs { grid-template-columns: 1fr; }
   .meta, .results { grid-template-columns: 1fr; }
+  .pm-row { grid-template-columns: 1fr; gap: 2px; }
+  .pm-a { justify-content: flex-start; text-align: left; }
+  .pm-arrow { display: none; }
 }
