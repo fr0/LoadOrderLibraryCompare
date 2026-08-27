@@ -24,9 +24,9 @@ const state = {
   b: { list: null, fileIndex: 0 },
 };
 
-// case-insensitive, and treats spaces and underscores as equivalent
+// case-insensitive, and treats spaces, underscores, and hyphens as equivalent
 function matchKey(name) {
-  return String(name).toLowerCase().replace(/[_\s]+/g, " ").trim();
+  return String(name).toLowerCase().replace(/[-_\s]+/g, " ").trim();
 }
 
 // Turn a file's raw content lines into structured entries
