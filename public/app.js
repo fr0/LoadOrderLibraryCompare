@@ -143,6 +143,7 @@ const NEXUS_DOMAINS = {
 function searchQuery(name) {
   return String(name)
     .replace(/^Unmanaged:\s*/i, "")
+    .replace(/(?:\.(?:esp|esm|esl|omwaddon|omwscripts|omwgame|bsa|ba2))+$/i, "") // Drop extensions
     .replace(/\s*\([^)]*\)\s*$/, "")
     .trim();
 }
