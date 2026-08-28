@@ -157,6 +157,16 @@ button:disabled { opacity: 0.5; cursor: default; }
 }
 .controls #filter { flex: 1; min-width: 200px; }
 .opt { font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+.opt select {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 7px;
+  padding: 4px 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.opt select:disabled { cursor: default; }
 
 /* Possible matches (same mod, named differently) */
 .possible {

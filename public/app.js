@@ -17,7 +17,11 @@ const els = {
   group: $("#opt-group"),
   groupLabel: $("#opt-group-label"),
   merge: $("#opt-merge"),
+  sort: $("#opt-sort"),
+  sortLabel: $("#opt-sort-label"),
 };
+
+const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 
 // Holds the two loaded lists and which file index is selected for each side
 const state = {
@@ -297,6 +301,11 @@ function renderDiff() {
   const filter = matchKey(els.filter.value);
   const match = (e) => !filter || e.key.includes(filter);
 
+  // Sorting only applies to the ungrouped view (grouping sorts by name within
+  // each category), so disable the control while grouping is active.
+  els.sort.disabled = els.group.checked;
+  els.sortLabel.style.opacity = els.group.checked ? "0.45" : "1";
+
   const gameA = state.a.list?.game || {};
   const gameB = state.b.list?.game || {};
   fillColumn("a-only", aOnly.filter(match), gameA);
@@ -337,7 +346,9 @@ function fillColumn(kind, entries, game) {
     return;
   }
   if (!els.group.checked) {
-    ul.innerHTML = entries.map((e) => itemHtml(e, game)).join("");
+    // Ungrouped: file order by default, or alphabetical when "Name" is chosen.
+    const rows = els.sort.value === "name" ? [...entries].sort(byName) : entries;
+    ul.innerHTML = rows.map((e) => itemHtml(e, game)).join("");
     return;
   }
   const groups = new Map();
@@ -347,8 +358,7 @@ function fillColumn(kind, entries, game) {
   }
   let html = "";
   for (const [cat, items] of groups) {
-    // Sort mods within each category alphabetically by name (case-insensitive).
-    items.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+    items.sort(byName);
     html += `<li class="cat-head">${escapeHtml(cat)}<span class="cat-count">${items.length}</span></li>`;
     html += items.map((e) => itemHtml(e, game)).join("");
   }
@@ -413,6 +423,7 @@ els.filter.addEventListener("input", () => { if (state.a.list) renderDiff(); });
 els.hideDisabled.addEventListener("change", () => { if (state.a.list) renderDiff(); });
 els.group.addEventListener("change", () => { if (state.a.list) renderDiff(); });
 els.merge.addEventListener("change", () => { if (state.a.list) renderDiff(); });
+els.sort.addEventListener("change", () => { if (state.a.list) renderDiff(); });
 
 wireCopyButtons();
 
