@@ -29,9 +29,24 @@ const state = {
   b: { list: null, fileIndex: 0 },
 };
 
-// case-insensitive, and treats spaces, underscores, and hyphens as equivalent
+// Normalize a mod/plugin name to a comparison key.
+// Case-insensitive. Treats spaces/underscores/hyphens as equivalent. Strips qualifiers that authors vary but that don't identify a different mod:
+//   * engine tags: "(OpenMW)", "(OpenMW 0.49)", "for OpenMW", "Big Icons - OpenMW"
+//   * parenthesized quality tags: "(HD)", "(2K)", "(4K)"
+//   * trailing version numbers: "... 6.1", "... 25.08.12", "... v2.0"
+// 2K vs. 4K could be argued to be genuinely different mods, so I'm kinda conflicted about this, but for now they're squished.
+// (The trailing-version strip requires a dotted number at the end, so plugin extensions like ".esp"/".esm" are unaffected.)
 function matchKey(name) {
-  return String(name).toLowerCase().replace(/[-_\s]+/g, " ").trim();
+  return String(name)
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+    .toLowerCase()
+    .replace(/\((?:for\s+)?open\s*mw[^)]*\)/g, " ")
+    .replace(/\((?:hd|sd|2k|4k|8k)\)/g, " ")
+    .replace(/\b(?:for\s+)?open\s*mw\b/g, " ")
+    .replace(/\s+(?:v(?:er(?:sion)?)?\.?\s*)?\d+(?:\.\d+)+\s*$/i, " ")
+    .replace(/[-_\s]+/g, " ")
+    .trim();
 }
 
 // Turn a file's raw content lines into structured entries
